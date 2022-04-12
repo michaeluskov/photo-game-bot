@@ -51,6 +51,7 @@ export class BotConfigurator {
       return next();
     });
     bot.command("greeter", (ctx) => ctx.scene.enter("greeter"));
+    bot.hears('/help', ctx => ctx.reply("ХЭЛП"));
     bot.on("message", async (ctx) => {
       const database = await getDatabase();
       const user = await database.collection("users").findOne<any>({
