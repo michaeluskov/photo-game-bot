@@ -3,11 +3,11 @@ import mongoose from "mongoose";
 require("dotenv").config();
 import { Telegraf } from "telegraf";
 import { container } from "tsyringe";
-import { BotConfigurator, LinguaBotContext } from "./src/bot/botConfigurator";
+import { BotConfigurator, PhotoGameBotContext } from "./src/bot/botConfigurator";
 
 mongoose.set("debug", true);
 
-const bot = new Telegraf<LinguaBotContext>(process.env["BOT_TOKEN"] || "", {
+const bot = new Telegraf<PhotoGameBotContext>(process.env["BOT_TOKEN"] || "", {
   telegram: { webhookReply: false },
 });
 
