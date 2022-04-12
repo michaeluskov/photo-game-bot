@@ -1,18 +1,16 @@
 import { Context, Scenes, Telegraf } from "telegraf";
-import { MongoClient } from "mongodb";
+import { Db, MongoClient } from "mongodb";
 const { session } = require("telegraf-session-mongodb");
 import { injectable } from "tsyringe";
-import { Db } from "mongoose/node_modules/mongodb";
 
 let database: Db;
 
 export async function getDatabase() {
-  if (database)
-  return database;
+  if (database) return database;
   const client = new MongoClient(process.env.MONGO_URL || "");
   await client.connect();
   database = client.db();
-  return database
+  return database;
 }
 
 export interface PhotoGameBotContext extends Context {
@@ -83,7 +81,7 @@ async function createNewTask(
     Omit<PhotoGameBotContext, keyof Context<import("typegram").Update>>
 ) {
   const db = await getDatabase();
-  const user = await db.collection("users").findOne({
+  const user = await db.collection("users").findOne<any>({
     telegram_id: ctx.message.from.id,
   });
   const tasks_count = await db.collection("task_themes").countDocuments();
@@ -102,5 +100,10 @@ async function createNewTask(
     .limit(1)
     .toArray();
   const pair = pairArray[0];
+  const createdTask = await db.collection("tasks").insertOne({
+    first: user.telegram_id,
+    second: pair.telegram_id,
+    task_name: task.name
+  });
   ctx.reply(`ЗАДАНИЕ ${task.name}, игрок ${pair.name}`);
 }
