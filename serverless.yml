@@ -1,0 +1,27 @@
+org: michaeluskov
+app: kewebrocks
+service: kewebrocks
+
+frameworkVersion: "3"
+
+provider:
+  name: aws
+  region: eu-central-1
+  runtime: nodejs12.x
+  environment:
+    BOT_TOKEN: ${param:BOT_TOKEN}
+    MONGO_URL: ${param:MONGO_URL}
+
+functions:
+  api:
+    handler: handler.handler
+    events:
+      - http:
+          path: /
+          method: ANY
+      - http:
+          path: /{proxy+}
+          method: ANY
+
+plugins:
+  - serverless-plugin-typescript
