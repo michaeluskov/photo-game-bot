@@ -111,7 +111,7 @@ export class BotConfigurator {
       await ctx.scene.enter("sendPhoto");
     });
     bot.hears("/help", (ctx) => ctx.replyWithHTML(helloText));
-    bot.hears("/gimmemoar", (ctx) => createNewTask(ctx, ctx.from.id));
+    bot.hears("/more", (ctx) => createNewTask(ctx, ctx.from.id));
     bot.on("message", async (ctx) => {
       await ctx.replyWithHTML(helloText);
       const user = await database.collection("users").findOne<any>({
@@ -179,8 +179,11 @@ async function createNewTask(
   });
   ctx.telegram.sendMessage(
     telegram_id,
-    `ЗАДАНИЕ ${task.name}, игрок ${pair.name}`,
-    inlineMessageRatingKeyboard(createdTask.insertedId.toString())
+    `<b>Новое задание!</b>\n\nТема: <b>${task.name}</b>\nНапарник: <b>${pair.name}</b>\n\nЕсли хочешь еще, жми /more`,
+    {
+      ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
+      parse_mode: 'HTML'
+    }
   );
 }
 
@@ -223,9 +226,9 @@ async function handlePhotoUpdate(
       },
     }
   );
-  const text = "Круто, задание выполнено! Скоро тебе придет еще одно";
-  await ctx.telegram.sendMessage(task.first, text);
-  await ctx.telegram.sendMessage(task.second, text);
+  const text = `Круто, задание <b>${task.task_name}</b> выполнено! Скоро тебе придет еще одно`;
+  await ctx.telegram.sendMessage(task.first, text, {parse_mode: 'HTML'});
+  await ctx.telegram.sendMessage(task.second, text, {parse_mode: 'HTML'});
   await ctx.scene.leave();
   await createNewTask(ctx, task.first);
   await createNewTask(ctx, task.second);

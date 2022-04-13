@@ -8,11 +8,12 @@ provider:
   name: aws
   region: eu-central-1
   runtime: nodejs12.x
+  timeout: 100
   environment:
     BOT_TOKEN: ${param:BOT_TOKEN}
     MONGO_URL: ${param:MONGO_URL}
-    AWS_ACCESS_KEY: ${param:AWS_ACCESS_KEY}
-    AWS_SECRET_KEY: ${param:AWS_SECRET_KEY}
+    STORAGE_KEY: ${param:STORAGE_KEY}
+    STORAGE_SECRET: ${param:STORAGE_SECRET}
 
 functions:
   api:
@@ -23,6 +24,13 @@ functions:
           method: ANY
       - http:
           path: /{proxy+}
+          method: ANY
+          
+  photosgetter:
+    handler: photos_getter.handler
+    events:
+      - http:
+          path: /photos
           method: ANY
 
 plugins:

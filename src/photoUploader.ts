@@ -1,8 +1,8 @@
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import fetch from 'node-fetch';
 
-const AWS_ACCESS_KEY = process.env["AWS_ACCESS_KEY"] || "";
-const AWS_SECRET_KEY = process.env["AWS_SECRET_KEY"] || "";
+const AWS_ACCESS_KEY = process.env["STORAGE_KEY"] || "";
+const AWS_SECRET_KEY = process.env["STORAGE_SECRET"] || "";
 const BUCKET_NAME = "kewebrocks";
 
 const s3Client = new S3Client({
