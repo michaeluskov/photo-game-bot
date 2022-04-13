@@ -177,14 +177,17 @@ async function createNewTask(
     second: pair.telegram_id,
     task_name: task.name,
   });
-  ctx.telegram.sendMessage(
-    telegram_id,
-    `<b>Новое задание!</b>\n\nТема: <b>${task.name}</b>\nНапарник: <b>${pair.name}</b>\n\nЕсли хочешь еще, жми /more`,
-    {
-      ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
-      parse_mode: 'HTML'
-    }
-  );
+  const messageText =
+    `<b>Новое задание!</b>\n\nТема: <b>${task.name}</b>\n` +
+    `Напарник: <b>${pair.name}</b>\n\nЕсли хочешь еще, жми /more. Когда получаешь новое задание, старое все так же можно сдать`;
+  ctx.telegram.sendMessage(telegram_id, messageText, {
+    ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
+    parse_mode: "HTML",
+  });
+  ctx.telegram.sendMessage(pair.telegram_id, messageText, {
+    ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
+    parse_mode: "HTML",
+  });
 }
 
 const inlineMessageRatingKeyboard = (taskId: string) =>
@@ -227,8 +230,8 @@ async function handlePhotoUpdate(
     }
   );
   const text = `Круто, задание <b>${task.task_name}</b> выполнено! Скоро тебе придет еще одно`;
-  await ctx.telegram.sendMessage(task.first, text, {parse_mode: 'HTML'});
-  await ctx.telegram.sendMessage(task.second, text, {parse_mode: 'HTML'});
+  await ctx.telegram.sendMessage(task.first, text, { parse_mode: "HTML" });
+  await ctx.telegram.sendMessage(task.second, text, { parse_mode: "HTML" });
   await ctx.scene.leave();
   await createNewTask(ctx, task.first);
   await createNewTask(ctx, task.second);

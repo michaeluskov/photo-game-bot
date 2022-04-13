@@ -2,7 +2,7 @@ import { getDatabase } from "./src/database";
 
 exports.handler = async (event: any) => {
   console.log(event);
-  const skip = event.queryStringParameters?.skip || 0;
+  const skip = Number(event.queryStringParameters?.skip) || 0;
   const database = await getDatabase();
   const tasks = await database
     .collection("tasks")
@@ -16,7 +16,7 @@ exports.handler = async (event: any) => {
   let response = {
     statusCode: 200,
     headers: {
-      "x-custom-header": "my custom header value",
+      "Access-Control-Allow-Origin": "*",
     },
     body: JSON.stringify(tasks),
   };
