@@ -13,9 +13,14 @@ export async function getDatabase() {
   return database;
 }
 
+export interface PhotoGameBotSession
+  extends Scenes.SceneSession<PhotoGameBotContext> {
+  taskId: string;
+}
+
 export interface PhotoGameBotContext extends Context {
   myContextProp: string;
-
+  session?: PhotoGameBotSession;
   // declare scene type
   scene: Scenes.SceneContextScene<PhotoGameBotContext>;
 }
@@ -48,9 +53,26 @@ export class BotConfigurator {
       await ctx.scene.leave();
     });
 
-    const stage = new Scenes.Stage<PhotoGameBotContext>([greeterScene], {
-      ttl: 10,
+    const sendPhotoScene = new Scenes.BaseScene<PhotoGameBotContext>(
+      "sendPhoto"
+    );
+    sendPhotoScene.enter(async (ctx) => {
+      await ctx.reply(`Ждем фотку по заданию ${ctx.session?.taskId}`);
     });
+    sendPhotoScene.command("exit", async (ctx) => {
+      await ctx.reply("Хорошо, выходим");
+      await ctx.scene.leave();
+    });
+    sendPhotoScene.hears(/.*/, async (ctx) => {
+      await ctx.reply(`Ждем фотку по заданию ${ctx.session?.taskId}`);
+    })
+
+    const stage = new Scenes.Stage<PhotoGameBotContext>(
+      [greeterScene, sendPhotoScene],
+      {
+        ttl: 10000,
+      }
+    );
     bot.use(stage.middleware());
     bot.use((ctx, next) => {
       // we now have access to the the fields defined above
@@ -60,17 +82,20 @@ export class BotConfigurator {
     bot.command("greeter", (ctx) => ctx.scene.enter("greeter"));
     bot.action(/send_photo/, async (ctx) => {
       await ctx.answerCbQuery();
-      await ctx.reply((ctx.callbackQuery as any).data);
+      const actionData = (ctx.callbackQuery as any).data;
+      const taskId = actionData.replace("send_photo", "");
+      ctx.session!.taskId = taskId;
+      await ctx.scene.enter("sendPhoto");
     });
     bot.hears("/help", (ctx) => ctx.reply("ХЭЛП"));
-    bot.hears("/more", (ctx) => createNewTask(ctx));
+    bot.hears("/gimmemoar", (ctx) => createNewTask(ctx));
     bot.on("message", async (ctx) => {
       const database = await getDatabase();
       const user = await database.collection("users").findOne<any>({
         telegram_id: ctx.message.from.id,
       });
       if (!user) {
-        ctx.scene.enter("greeter");
+        await ctx.scene.enter("greeter");
       } else {
         ctx.reply(`ПРИВЕТ, ${user.name}`);
       }
@@ -112,10 +137,10 @@ async function createNewTask(
   ctx.telegram.sendMessage(
     ctx.from.id,
     `ЗАДАНИЕ ${task.name}, игрок ${pair.name}`,
-    inlineMessageRatingKeyboard
+    inlineMessageRatingKeyboard(createdTask.insertedId.toString())
   );
 }
 
-const inlineMessageRatingKeyboard = Markup.inlineKeyboard([
-  Markup.button.callback("Отправить фотку", "send_photo"),
+const inlineMessageRatingKeyboard = (taskId: string) => Markup.inlineKeyboard([
+  Markup.button.callback("Отправить фотку", `send_photo${taskId}`),
 ]);
