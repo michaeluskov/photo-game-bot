@@ -1,5 +1,5 @@
 import { Context, Markup, Scenes, Telegraf } from "telegraf";
-import { Db, MongoClient } from "mongodb";
+import { Db, MongoClient, ObjectId } from "mongodb";
 const { session } = require("telegraf-session-mongodb");
 import { injectable } from "tsyringe";
 
@@ -64,8 +64,19 @@ export class BotConfigurator {
       await ctx.scene.leave();
     });
     sendPhotoScene.hears(/.*/, async (ctx) => {
-      await ctx.reply(`Ждем фотку по заданию ${ctx.session?.taskId}`);
-    })
+      const task = await database.collection("tasks").findOne<any>({
+        _id: new ObjectId(ctx.session!.taskId),
+      });
+      const first = await database.collection("users").findOne<any>({
+        telegram_id: task.first,
+      });
+      const second = await database.collection("users").findOne<any>({
+        telegram_id: task.second,
+      });
+      await ctx.reply(
+        `Ждем фотку по заданию ${task.task_name} (${first.name} + ${second.name})`
+      );
+    });
 
     const stage = new Scenes.Stage<PhotoGameBotContext>(
       [greeterScene, sendPhotoScene],
@@ -141,6 +152,7 @@ async function createNewTask(
   );
 }
 
-const inlineMessageRatingKeyboard = (taskId: string) => Markup.inlineKeyboard([
-  Markup.button.callback("Отправить фотку", `send_photo${taskId}`),
-]);
+const inlineMessageRatingKeyboard = (taskId: string) =>
+  Markup.inlineKeyboard([
+    Markup.button.callback("Отправить фотку", `send_photo${taskId}`),
+  ]);
