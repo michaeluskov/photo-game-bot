@@ -1,4 +1,4 @@
-import { Context, Scenes, Telegraf } from "telegraf";
+import { Context, Markup, Scenes, Telegraf } from "telegraf";
 import { Db, MongoClient } from "mongodb";
 const { session } = require("telegraf-session-mongodb");
 import { injectable } from "tsyringe";
@@ -58,6 +58,10 @@ export class BotConfigurator {
       return next();
     });
     bot.command("greeter", (ctx) => ctx.scene.enter("greeter"));
+    bot.action(/send_photo/, async (ctx) => {
+      await ctx.answerCbQuery();
+      await ctx.reply((ctx.callbackQuery as any).data);
+    });
     bot.hears("/help", (ctx) => ctx.reply("ХЭЛП"));
     bot.hears("/more", (ctx) => createNewTask(ctx));
     bot.on("message", async (ctx) => {
@@ -103,7 +107,15 @@ async function createNewTask(
   const createdTask = await db.collection("tasks").insertOne({
     first: user.telegram_id,
     second: pair.telegram_id,
-    task_name: task.name
+    task_name: task.name,
   });
-  ctx.reply(`ЗАДАНИЕ ${task.name}, игрок ${pair.name}`);
+  ctx.telegram.sendMessage(
+    ctx.from.id,
+    `ЗАДАНИЕ ${task.name}, игрок ${pair.name}`,
+    inlineMessageRatingKeyboard
+  );
 }
+
+const inlineMessageRatingKeyboard = Markup.inlineKeyboard([
+  Markup.button.callback("Отправить фотку", "send_photo"),
+]);
