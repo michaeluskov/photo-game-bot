@@ -11,6 +11,8 @@ provider:
   environment:
     BOT_TOKEN: ${param:BOT_TOKEN}
     MONGO_URL: ${param:MONGO_URL}
+    AWS_ACCESS_KEY: ${param:AWS_ACCESS_KEY}
+    AWS_SECRET_KEY: ${param:AWS_SECRET_KEY}
 
 functions:
   api:
