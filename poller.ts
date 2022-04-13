@@ -2,7 +2,7 @@ import "reflect-metadata";
 require('dotenv').config()
 import { Telegraf } from 'telegraf';
 import { container } from "tsyringe";
-import { BotConfigurator, PhotoGameBotContext } from "./src/bot/botConfigurator";
+import { BotConfigurator, PhotoGameBotContext } from "./src/botConfigurator";
 
 const bot = new Telegraf<PhotoGameBotContext>(process.env['BOT_TOKEN'] || "");
 

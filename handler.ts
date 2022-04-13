@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 require("dotenv").config();
 import { Telegraf } from "telegraf";
 import { container } from "tsyringe";
-import { BotConfigurator, PhotoGameBotContext } from "./src/bot/botConfigurator";
+import { BotConfigurator, PhotoGameBotContext } from "./src/botConfigurator";
 
 mongoose.set("debug", true);
 
