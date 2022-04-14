@@ -59,7 +59,6 @@ export class BotConfigurator {
         `Хорошо, ${name}. Приятно познакомиться!\n\nЕсли ты на выезде, запусти /enable, чтобы тебе начали приходить новые задания. Когда будешь уезжать (или не сможешь играть), выполни /disable`
       );
       await ctx.scene.leave();
-      await createNewTask(ctx, ctx.message.from.id);
     });
 
     const sendPhotoScene = new Scenes.BaseScene<PhotoGameBotContext>(
@@ -111,6 +110,14 @@ export class BotConfigurator {
     bot.hears("/more", (ctx) => createNewTask(ctx, ctx.from.id));
     bot.hears("/enable", async (ctx) => {
       const database = await getDatabase();
+      await database.collection("users").findOneAndUpdate(
+        {
+          telegram_id: ctx.message.from.id,
+        },
+        {
+          $set: { is_absent: false },
+        }
+      );
       await ctx.replyWithHTML(
         "Ура! Скоро тебе будут приходить новые задания.\n\nЧтобы получить новое задание прямо сейчас, запусти /more\nЕсли вдруг ты уедешь, то не забудь выполнить /disable"
       );
@@ -129,7 +136,7 @@ export class BotConfigurator {
         "Хорошо, я больше не буду присылать тебе задания :(\n\nЧтобы опять начать игру, запусти /enable"
       );
     });
-    bot.on("message", async (ctx) => {
+    bot.hears(/.*/, async (ctx) => {
       await ctx.replyWithHTML(helloText);
       const user = await (await getDatabase())
         .collection("users")
