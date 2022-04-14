@@ -1,6 +1,7 @@
 import { getDatabase } from "./src/database";
 
-exports.handler = async (event: any) => {
+exports.handler = async (event: any, context: any) => {
+  context.callbackWaitsForEmptyEventLoop = false;
   console.log(event);
   const skip = Number(event.queryStringParameters?.skip) || 0;
   const database = await getDatabase();

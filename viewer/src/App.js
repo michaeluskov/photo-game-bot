@@ -1,24 +1,39 @@
-import logo from './logo.svg';
-import './App.css';
+import "./App.css";
+import InfiniteScroll from "react-infinite-scroll-component";
+import { useState, useEffect, useRef } from "react";
 
 function App() {
+  const [currentPage, setCurrentPage] = useState(0);
+  const [elements, setNewElements] = useState([]);
+
+  async function loadMore() {
+    const newItemsResponse = await fetch(
+      `https://xvrt5rakjf.execute-api.eu-central-1.amazonaws.com/dev/photos?skip=${
+        currentPage * 10
+      }`
+    );
+    const newItems = await newItemsResponse.json();
+    console.log(newItems);
+    setNewElements([...elements, ...newItems]);
+    setCurrentPage(currentPage + 1);
+  }
+
+  useEffect(() => {loadMore()}, []);
+
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <InfiniteScroll
+      className="App"
+      dataLength={elements.length}
+      next={loadMore}
+      hasMore={true}
+    >
+      {elements.map((e) => (
+        <div className="App-item" key={e._id}>
+          <img className="App-image" src={e.photo_url} alt={e.task_name} />
+          <div className="App-caption">{e.task_name}</div>
+        </div>
+      ))}
+    </InfiniteScroll>
   );
 }
 

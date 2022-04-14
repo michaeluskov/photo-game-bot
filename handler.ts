@@ -1,24 +1,20 @@
 import "reflect-metadata";
-import mongoose from "mongoose";
 require("dotenv").config();
 import { Telegraf } from "telegraf";
 import { container } from "tsyringe";
 import { BotConfigurator, PhotoGameBotContext } from "./src/botConfigurator";
-
-mongoose.set("debug", true);
 
 const bot = new Telegraf<PhotoGameBotContext>(process.env["BOT_TOKEN"] || "", {
   telegram: { webhookReply: false },
 });
 
 const botConfigurator = container.resolve(BotConfigurator);
-botConfigurator.configureBot(bot);
+const configuredPromise = botConfigurator.configureBot(bot);
 
-module.exports.handler = async (event: any) => {
+module.exports.handler = async (event: any, context: any) => {
   try {
-    if (!botConfigurator.isConfigured) {
-      await botConfigurator.configureBot(bot);
-    }
+    context.callbackWaitsForEmptyEventLoop = false;
+      await configuredPromise;
     await bot.handleUpdate(JSON.parse(event.body));
     return { statusCode: 200 };
   } catch (e) {

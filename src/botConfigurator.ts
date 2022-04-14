@@ -4,7 +4,7 @@ const { session } = require("telegraf-session-mongodb");
 import { injectable } from "tsyringe";
 import { loadStream, uploadPhoto } from "./photoUploader";
 import { url } from "telegraf/typings/button";
-import { getDatabase, database } from "./database";
+import { getDatabase } from "./database";
 import { helloText } from "./texts";
 
 export interface PhotoGameBotSession
@@ -21,13 +21,7 @@ export interface PhotoGameBotContext extends Context {
 
 @injectable()
 export class BotConfigurator {
-  isConfigured: boolean = false;
-
   async configureBot(bot: Telegraf<PhotoGameBotContext>) {
-    this.isConfigured = true;
-
-    const database = await getDatabase();
-
     bot.use(async (ctx, next) => {
       try {
         await next();
@@ -35,7 +29,7 @@ export class BotConfigurator {
         console.error(e);
       }
     });
-    bot.use(session(database, { collectionName: "sessions" }));
+    bot.use(session(await getDatabase(), { collectionName: "sessions" }));
 
     const { enter, leave } = Scenes.Stage;
 
@@ -48,32 +42,35 @@ export class BotConfigurator {
     );
     greeterScene.on("message", async (ctx) => {
       const name = (ctx.message as any).text;
-      await database.collection("users").findOneAndReplace(
+      await (await getDatabase()).collection("users").findOneAndReplace(
         {
-          telegam_id: ctx.message.from.id,
+          telegram_id: ctx.message.from.id,
         },
         {
           telegram_id: ctx.message.from.id,
+          is_absent: true,
           name,
         },
         {
           upsert: true,
         }
       );
-      await ctx.reply(
-        `Хорошо, ${name}. Приятно познакомиться! Скоро тебе придут первые задания`
+      await ctx.replyWithHTML(
+        `Хорошо, ${name}. Приятно познакомиться!\n\nЕсли ты на выезде, запусти /enable, чтобы тебе начали приходить новые задания. Когда будешь уезжать (или не сможешь играть), выполни /disable`
       );
       await ctx.scene.leave();
-      await createNewTask(ctx, ctx.from.id);
+      await createNewTask(ctx.message.from.id);
     });
 
     const sendPhotoScene = new Scenes.BaseScene<PhotoGameBotContext>(
       "sendPhoto"
     );
     sendPhotoScene.enter(async (ctx) => {
-      const task = await database.collection("tasks").findOne<any>({
-        _id: new ObjectId(ctx.session!.taskId),
-      });
+      const task = await (await getDatabase())
+        .collection("tasks")
+        .findOne<any>({
+          _id: new ObjectId(ctx.session!.taskId),
+        });
       if (!task || task.done) {
         await ctx.reply("По этой задаче уже есть отправка:(");
         await ctx.scene.leave();
@@ -112,11 +109,33 @@ export class BotConfigurator {
     });
     bot.hears("/help", (ctx) => ctx.replyWithHTML(helloText));
     bot.hears("/more", (ctx) => createNewTask(ctx, ctx.from.id));
+    bot.hears("/enable", async (ctx) => {
+      const database = await getDatabase();
+      await ctx.replyWithHTML(
+        "Ура! Скоро тебе будут приходить новые задания.\n\nЧтобы получить новое задание прямо сейчас, запусти /more\nЕсли вдруг ты уедешь, то не забудь выполнить /disable"
+      );
+    });
+    bot.hears("/disable", async (ctx) => {
+      const database = await getDatabase();
+      await database.collection("users").findOneAndUpdate(
+        {
+          telegram_id: ctx.message.from.id,
+        },
+        {
+          $set: { is_absent: true },
+        }
+      );
+      await ctx.replyWithHTML(
+        "Хорошо, я больше не буду присылать тебе задания :(\n\nЧтобы опять начать игру, запусти /enable"
+      );
+    });
     bot.on("message", async (ctx) => {
       await ctx.replyWithHTML(helloText);
-      const user = await database.collection("users").findOne<any>({
-        telegram_id: ctx.message.from.id,
-      });
+      const user = await (await getDatabase())
+        .collection("users")
+        .findOne<any>({
+          telegram_id: ctx.message.from.id,
+        });
       if (!user) await ctx.scene.enter("greeter");
     });
 
@@ -125,13 +144,13 @@ export class BotConfigurator {
 }
 
 async function sendPhotoGreeting(ctx: any) {
-  const task = await database.collection("tasks").findOne<any>({
+  const task = await (await getDatabase()).collection("tasks").findOne<any>({
     _id: new ObjectId(ctx.session!.taskId),
   });
-  const first = await database.collection("users").findOne<any>({
+  const first = await (await getDatabase()).collection("users").findOne<any>({
     telegram_id: task.first,
   });
-  const second = await database.collection("users").findOne<any>({
+  const second = await (await getDatabase()).collection("users").findOne<any>({
     telegram_id: task.second,
   });
   await ctx.replyWithHTML(
@@ -157,10 +176,13 @@ async function createNewTask(
     .toArray();
   if (taskArray.length == 0) return;
   const task = taskArray[0];
-  const users_count = await db.collection("users").countDocuments();
+  const users_count = await db.collection("users").countDocuments({
+    is_absent: false,
+  });
   const pairArray = await db
     .collection("users")
     .find<any>({
+      is_absent: false,
       telegram_id: {
         $not: {
           $eq: telegram_id,
@@ -177,17 +199,19 @@ async function createNewTask(
     second: pair.telegram_id,
     task_name: task.name,
   });
-  const messageText =
+  const messageText = (pairUser: any) =>
     `<b>Новое задание!</b>\n\nТема: <b>${task.name}</b>\n` +
-    `Напарник: <b>${pair.name}</b>\n\nЕсли хочешь еще, жми /more. Когда получаешь новое задание, старое все так же можно сдать`;
-  ctx.telegram.sendMessage(telegram_id, messageText, {
+    `Напарник: <b>${pairUser.name}</b>\n\nЕсли хочешь еще, жми /more. Когда получаешь новое задание, старое все так же можно сдать\n\nЕсли ты больше не хочешь получать новые задания, жми /disable`;
+  const userMessage = await ctx.telegram.sendMessage(telegram_id, messageText(pair), {
     ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
     parse_mode: "HTML",
   });
-  ctx.telegram.sendMessage(pair.telegram_id, messageText, {
+  await ctx.telegram.pinChatMessage(telegram_id, userMessage.message_id);
+  const pairMessage = await ctx.telegram.sendMessage(pair.telegram_id, messageText(user), {
     ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
     parse_mode: "HTML",
   });
+  await ctx.telegram.pinChatMessage(pair.telegram_id, pairMessage.message_id);
 }
 
 const inlineMessageRatingKeyboard = (taskId: string) =>
@@ -214,21 +238,23 @@ async function handlePhotoUpdate(
   const photoUrl = await ctx.telegram.getFileLink(largestFileId);
   const buffer = await loadStream(photoUrl.toString());
   const uploadedUrl = await uploadPhoto(fileName, buffer);
-  const task = await database.collection("tasks").findOne<any>({
+  const task = await (await getDatabase()).collection("tasks").findOne<any>({
     _id: new ObjectId(ctx.session!.taskId),
   });
-  const updateResult = await database.collection("tasks").updateOne(
-    {
-      _id: new ObjectId(ctx.session!.taskId),
-    },
-    {
-      $set: {
-        done: 1,
-        photo_url: uploadedUrl,
-        done_datetime: new Date(),
+  const updateResult = await (await getDatabase())
+    .collection("tasks")
+    .updateOne(
+      {
+        _id: new ObjectId(ctx.session!.taskId),
       },
-    }
-  );
+      {
+        $set: {
+          done: 1,
+          photo_url: uploadedUrl,
+          done_datetime: new Date(),
+        },
+      }
+    );
   const text = `Круто, задание <b>${task.task_name}</b> выполнено! Скоро тебе придет еще одно`;
   await ctx.telegram.sendMessage(task.first, text, { parse_mode: "HTML" });
   await ctx.telegram.sendMessage(task.second, text, { parse_mode: "HTML" });
