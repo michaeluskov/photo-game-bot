@@ -59,7 +59,7 @@ export class BotConfigurator {
         `Хорошо, ${name}. Приятно познакомиться!\n\nЕсли ты на выезде, запусти /enable, чтобы тебе начали приходить новые задания. Когда будешь уезжать (или не сможешь играть), выполни /disable`
       );
       await ctx.scene.leave();
-      await createNewTask(ctx.message.from.id);
+      await createNewTask(ctx, ctx.message.from.id);
     });
 
     const sendPhotoScene = new Scenes.BaseScene<PhotoGameBotContext>(
