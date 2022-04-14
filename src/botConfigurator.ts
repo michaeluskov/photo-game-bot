@@ -31,8 +31,6 @@ export class BotConfigurator {
     });
     bot.use(session(await getDatabase(), { collectionName: "sessions" }));
 
-    const { enter, leave } = Scenes.Stage;
-
     // Greeter scene
     const greeterScene = new Scenes.BaseScene<PhotoGameBotContext>("greeter");
     greeterScene.enter((ctx) =>
