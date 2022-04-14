@@ -206,7 +206,7 @@ async function createNewTask(
   });
   const messageText = (pairUser: any) =>
     `<b>Новое задание!</b>\n\nТема: <b>${task.name}</b>\n` +
-    `Напарник: <b>${pairUser.name}</b>\n\nЕсли хочешь еще, жми /more. Когда получаешь новое задание, старое все так же можно сдать\n\nЕсли ты больше не хочешь получать новые задания, жми /disable`;
+    `Напарник: <b>${pairUser.name}</b>\n\nЕсли хочешь еще, жми /more. Когда получаешь новое задание, старое все так же можно сдать\n\nЕсли ты уже не на выезде и больше не хочешь получать новые задания, жми /disable`;
   const userMessage = await ctx.telegram.sendMessage(telegram_id, messageText(pair), {
     ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
     parse_mode: "HTML",
