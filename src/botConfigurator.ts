@@ -134,6 +134,11 @@ export class BotConfigurator {
         "Хорошо, я больше не буду присылать тебе задания :(\n\nЧтобы опять начать игру, запусти /enable"
       );
     });
+    bot.on("photo", (ctx) =>
+      ctx.reply(
+        "Я не понимаю, на какое задание это ответ :( Сначала нажми 'Отправить фотку' под заданием"
+      )
+    );
     bot.hears(/.*/, async (ctx) => {
       await ctx.replyWithHTML(helloText);
       const user = await (await getDatabase())
@@ -207,15 +212,23 @@ async function createNewTask(
   const messageText = (pairUser: any) =>
     `<b>Новое задание!</b>\n\nТема: <b>${task.name}</b>\n` +
     `Напарник: <b>${pairUser.name}</b>\n\nЕсли хочешь еще, жми /more. Когда получаешь новое задание, старое все так же можно сдать\n\nЕсли ты уже не на выезде и больше не хочешь получать новые задания, жми /disable`;
-  const userMessage = await ctx.telegram.sendMessage(telegram_id, messageText(pair), {
-    ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
-    parse_mode: "HTML",
-  });
+  const userMessage = await ctx.telegram.sendMessage(
+    telegram_id,
+    messageText(pair),
+    {
+      ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
+      parse_mode: "HTML",
+    }
+  );
   await ctx.telegram.pinChatMessage(telegram_id, userMessage.message_id);
-  const pairMessage = await ctx.telegram.sendMessage(pair.telegram_id, messageText(user), {
-    ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
-    parse_mode: "HTML",
-  });
+  const pairMessage = await ctx.telegram.sendMessage(
+    pair.telegram_id,
+    messageText(user),
+    {
+      ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
+      parse_mode: "HTML",
+    }
+  );
   await ctx.telegram.pinChatMessage(pair.telegram_id, pairMessage.message_id);
 }
 
