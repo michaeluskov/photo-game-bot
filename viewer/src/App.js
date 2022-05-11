@@ -1,24 +1,38 @@
 import "./App.css";
 import InfiniteScroll from "react-infinite-scroll-component";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+
+let getAllItemsPromise = null;
+const getAllItems = () => {
+  if (getAllItemsPromise) return getAllItemsPromise;
+  getAllItemsPromise = (async () => {
+    const newItemsResponse = await fetch(
+      `photos.json`
+    );
+    return newItemsResponse.json();
+  })();
+  return getAllItemsPromise;
+};
+
+const items = async (skip) => {
+  const allItems = await getAllItems();
+  return allItems.slice(skip, skip + 10);
+};
 
 function App() {
   const [currentPage, setCurrentPage] = useState(0);
   const [elements, setNewElements] = useState([]);
 
   async function loadMore() {
-    const newItemsResponse = await fetch(
-      `https://xvrt5rakjf.execute-api.eu-central-1.amazonaws.com/dev/photos?skip=${
-        currentPage * 10
-      }`
-    );
-    const newItems = await newItemsResponse.json();
+    const newItems = await items(currentPage * 10);
     console.log(newItems);
     setNewElements([...elements, ...newItems]);
     setCurrentPage(currentPage + 1);
   }
 
-  useEffect(() => {loadMore()}, []);
+  useEffect(() => {
+    loadMore();
+  }, []);
 
   return (
     <InfiniteScroll
