@@ -16,7 +16,7 @@ const getAllItems = () => {
 
 const items = async (skip) => {
   const allItems = await getAllItems();
-  return allItems.slice(skip, skip + 10);
+  return allItems.slice(skip);
 };
 
 function App() {
