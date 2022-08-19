@@ -108,7 +108,7 @@ export class BotConfigurator {
     bot.hears("/more", (ctx) => createNewTask(ctx, ctx.from.id));
     bot.hears("/enable", async (ctx) => {
       const database = await getDatabase();
-      await database.collection("users").findOneAndUpdate(
+      await database.collection<any>("users").findOneAndUpdate(
         {
           telegram_id: ctx.message.from.id,
         },
@@ -122,7 +122,7 @@ export class BotConfigurator {
     });
     bot.hears("/disable", async (ctx) => {
       const database = await getDatabase();
-      await database.collection("users").findOneAndUpdate(
+      await database.collection<any>("users").findOneAndUpdate(
         {
           telegram_id: ctx.message.from.id,
         },
