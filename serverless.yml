@@ -1,6 +1,6 @@
 org: michaeluskov
-app: kewebrocks
-service: kewebrocks
+app: photogamebot
+service: photogamebot
 
 frameworkVersion: "3"
 
