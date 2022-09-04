@@ -13,7 +13,6 @@ export interface PhotoGameBotSession
 }
 
 export interface PhotoGameBotContext extends Context {
-  myContextProp: string;
   session?: PhotoGameBotSession;
   // declare scene type
   scene: Scenes.SceneContextScene<PhotoGameBotContext>;
@@ -91,11 +90,6 @@ export class BotConfigurator {
       }
     );
     bot.use(stage.middleware());
-    bot.use((ctx, next) => {
-      // we now have access to the the fields defined above
-      ctx.myContextProp ??= "";
-      return next();
-    });
     bot.command("greeter", (ctx) => ctx.scene.enter("greeter"));
     bot.action(/send_photo/, async (ctx) => {
       await ctx.answerCbQuery();
