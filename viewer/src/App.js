@@ -28,9 +28,9 @@ function App() {
       hasMore={true}
     >
       {elements.map((e) => (
-        <div className="App-item" key={e._id}>
+        <div className="App-item" key={e.done_datetime}>
           <img className="App-image" src={e.photo_url} alt={e.task_name} />
-          <div className="App-caption">{e.task_name}</div>
+          <div className="App-caption">{e.task_name} ({e.first_name} + {e.second_name})</div>
         </div>
       ))}
     </InfiniteScroll>

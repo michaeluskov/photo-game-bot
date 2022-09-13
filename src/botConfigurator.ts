@@ -100,6 +100,7 @@ export class BotConfigurator {
     });
     bot.hears("/help", (ctx) => ctx.replyWithHTML(helloText));
     bot.hears("/more", (ctx) => createNewTask(ctx, ctx.from.id));
+    bot.hears("/more_to_me", (ctx) => createNewTask(ctx, ctx.from.id, ctx.from.id));
     bot.hears("/enable", async (ctx) => {
       const database = await getDatabase();
       await database.collection<any>("users").findOneAndUpdate(
@@ -165,7 +166,8 @@ async function sendPhotoGreeting(ctx: any) {
 async function createNewTask(
   ctx: Context<import("typegram").Update.MessageUpdate> &
     Omit<PhotoGameBotContext, keyof Context<import("typegram").Update>>,
-  telegram_id: number
+  telegram_id: number,
+  pair_telegram_id?: number
 ) {
   const db = await getDatabase();
   const user = await db.collection("users").findOne<any>({
@@ -183,21 +185,28 @@ async function createNewTask(
   const users_count = await db.collection("users").countDocuments({
     is_absent: false,
   });
-  const pairArray = await db
-    .collection("users")
-    .find<any>({
-      is_absent: false,
-      telegram_id: {
-        $not: {
-          $eq: telegram_id,
+  let pair;
+  if (pair_telegram_id) {
+    pair = await db.collection("users").findOne<any>({
+      telegram_id: pair_telegram_id,
+    });
+  } else {
+    const pairArray = await db
+      .collection("users")
+      .find<any>({
+        is_absent: false,
+        telegram_id: {
+          $not: {
+            $eq: telegram_id,
+          },
         },
-      },
-    })
-    .skip(Math.max(Math.floor(Math.random() * users_count - 1), 0))
-    .limit(1)
-    .toArray();
-  if (pairArray.length == 0) return;
-  const pair = pairArray[0];
+      })
+      .skip(Math.max(Math.floor(Math.random() * users_count - 1), 0))
+      .limit(1)
+      .toArray();
+    if (pairArray.length == 0) return;
+    pair = pairArray[0];
+  }
   const createdTask = await db.collection("tasks").insertOne({
     first: user.telegram_id,
     second: pair.telegram_id,
@@ -215,15 +224,17 @@ async function createNewTask(
     }
   );
   await ctx.telegram.pinChatMessage(telegram_id, userMessage.message_id);
-  const pairMessage = await ctx.telegram.sendMessage(
-    pair.telegram_id,
-    messageText(user),
-    {
-      ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
-      parse_mode: "HTML",
-    }
-  );
-  await ctx.telegram.pinChatMessage(pair.telegram_id, pairMessage.message_id);
+  if (pair_telegram_id != telegram_id) {
+    const pairMessage = await ctx.telegram.sendMessage(
+      pair.telegram_id,
+      messageText(user),
+      {
+        ...inlineMessageRatingKeyboard(createdTask.insertedId.toString()),
+        parse_mode: "HTML",
+      }
+    );
+    await ctx.telegram.pinChatMessage(pair.telegram_id, pairMessage.message_id);
+  }
 }
 
 const inlineMessageRatingKeyboard = (taskId: string) =>
