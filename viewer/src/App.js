@@ -8,7 +8,7 @@ function App() {
 
   async function loadMore() {
     const newItemsResponse = await fetch(
-      `https://kbx4r9s734.execute-api.eu-central-1.amazonaws.com/dev/photos?skip=${
+      `https://xgs6358a78.execute-api.eu-central-1.amazonaws.com/dev/photos?skip=${
         currentPage * 10
       }`
     );
