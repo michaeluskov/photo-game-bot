@@ -214,7 +214,7 @@ async function createNewTask(
   });
   const messageText = (pairUser: any) =>
     `<b>Новое задание!</b>\n\nТема: <b>${task.name}</b>\n` +
-    `Напарник: <a href="tg://user?id=${pairUser.telegram_id}">${pairUser.name}</a>\n\nЕсли хочешь еще, жми /more. Когда получаешь новое задание, старое все так же можно сдать\n\nЕсли ты уже не на тусовке и больше не хочешь получать новые задания, жми /disable`;
+    `Напарник: <a href="tg://user?id=${pairUser.telegram_id}">${pairUser.name}</a>\n\nЕсли хочешь еще, жми /more. Когда получаешь новое задание, старое все так же можно сдать\n\nЕсли ты уже не на КонфУРе и больше не хочешь получать новые задания, жми /disable`;
   const userMessage = await ctx.telegram.sendMessage(
     telegram_id,
     messageText(pair),
