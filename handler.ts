@@ -14,7 +14,7 @@ const configuredPromise = botConfigurator.configureBot(bot);
 module.exports.handler = async (event: any, context: any) => {
   try {
     context.callbackWaitsForEmptyEventLoop = false;
-      await configuredPromise;
+    await configuredPromise;
     await bot.handleUpdate(JSON.parse(event.body));
     return { statusCode: 200 };
   } catch (e) {

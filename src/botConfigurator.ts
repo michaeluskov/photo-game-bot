@@ -34,7 +34,7 @@ export class BotConfigurator {
     const greeterScene = new Scenes.BaseScene<PhotoGameBotContext>("greeter");
     greeterScene.enter((ctx) =>
       ctx.replyWithHTML(
-        "Для начала давай представимся. Напиши, как тебя зовут (например, <b>Машенька Дудниченко</b>)"
+        "Для начала давай представимся. Напиши, как тебя зовут (например, <b>Ваня Иванов</b>)"
       )
     );
     greeterScene.on("message", async (ctx) => {
@@ -53,7 +53,7 @@ export class BotConfigurator {
         }
       );
       await ctx.replyWithHTML(
-        `Хорошо, ${name}. Приятно познакомиться!\n\nЕсли ты на тусовке, запусти /enable, чтобы тебе начали приходить новые задания. Когда будешь уезжать (или не сможешь играть), выполни /disable`
+        `Хорошо, ${name}. Приятно познакомиться!\n\nЕсли ты на выезде, запусти /enable, чтобы тебе начали приходить новые задания. Когда будешь уезжать (или не сможешь играть), выполни /disable`
       );
       await ctx.scene.leave();
     });
