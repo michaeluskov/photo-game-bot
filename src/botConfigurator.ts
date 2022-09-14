@@ -139,7 +139,7 @@ export class BotConfigurator {
     });
     bot.on("photo", (ctx) =>
       ctx.reply(
-        "Я не понимаю, на какое задание это ответ :( Сначала нажми 'Отправить фотку' под заданием"
+        "Я не понимаю, на какое задание это ответ :( Сначала нажми на кнопку 'Отправить фотку' под заданием"
       )
     );
     bot.hears(/.*/, async (ctx) => {
@@ -167,7 +167,7 @@ async function sendPhotoGreeting(ctx: any) {
     telegram_id: task.second,
   });
   await ctx.replyWithHTML(
-    `Ждем фотку по заданию <b>${task.task_name}</b> (<b>${first.name}</b> + <b>${second.name}</b>)\n\nЕсли не хочешь отправлять, нажми /exit`
+    `Ждем фотку по заданию <b>${task.task_name}</b> (<b>${first.name}</b> + <b>${second.name}</b>)\nНажми на кнопку 📎 внизу экрана, выбери фотку и отправь\n\nЕсли не хочешь отправлять или перепутал задание, нажми /exit`
   );
 }
 
@@ -248,6 +248,7 @@ async function handlePhotoUpdate(
   }> &
     Omit<PhotoGameBotContext, keyof Context<import("typegram").Update>>
 ) {
+  const db = await getDatabase();
   const largestFile =
     ctx.update.message.photo[ctx.update.message.photo.length - 1];
   const largestFileId = largestFile.file_id;
@@ -258,27 +259,35 @@ async function handlePhotoUpdate(
   const photoUrl = await ctx.telegram.getFileLink(largestFileId);
   const buffer = await loadStream(photoUrl.toString());
   const uploadedUrl = await uploadPhoto(fileName, buffer);
-  const task = await (await getDatabase()).collection("tasks").findOne<any>({
+  const task = await db.collection("tasks").findOne<any>({
     _id: new ObjectId(ctx.session!.taskId),
   });
-  const updateResult = await (await getDatabase())
-    .collection("tasks")
-    .updateOne(
-      {
-        _id: new ObjectId(ctx.session!.taskId),
+  const updateResult = await db.collection("tasks").updateOne(
+    {
+      _id: new ObjectId(ctx.session!.taskId),
+    },
+    {
+      $set: {
+        done: 1,
+        photo_url: uploadedUrl,
+        done_datetime: new Date(),
       },
-      {
-        $set: {
-          done: 1,
-          photo_url: uploadedUrl,
-          done_datetime: new Date(),
-        },
-      }
-    );
+    }
+  );
   const text = `Круто, задание <b>${task.task_name}</b> выполнено! Скоро тебе придет еще одно`;
   await ctx.telegram.sendMessage(task.first, text, { parse_mode: "HTML" });
   await ctx.telegram.sendMessage(task.second, text, { parse_mode: "HTML" });
   await ctx.scene.leave();
-  await createNewTask(ctx, task.first);
-  await createNewTask(ctx, task.second);
+  if (
+    !(await db.collection("users").findOne<any>({ telegram_id: task.first }))
+      .is_absent
+  ) {
+    await createNewTask(ctx, task.first);
+  }
+  if (
+    !(await db.collection("users").findOne<any>({ telegram_id: task.second }))
+      .is_absent
+  ) {
+    await createNewTask(ctx, task.second);
+  }
 }
