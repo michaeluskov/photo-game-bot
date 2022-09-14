@@ -12,11 +12,12 @@ export async function getDatabase() {
   return database;
 }
 
-export async function getUsersWithMinimumTaskCount() {
+export async function getUsersWithMinimumTaskCount(telegram_id: number) {
   const db = await getDatabase();
   const users = await db
     .collection("users")
     .aggregate<any>([
+      { $match: { is_absent: false, telegram_id: { $ne: telegram_id } } },
       {
         $lookup: {
           from: "tasks",

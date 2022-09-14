@@ -24,7 +24,11 @@ export class BotConfigurator {
   async configureBot(bot: Telegraf<PhotoGameBotContext>) {
     bot.use(async (ctx, next) => {
       try {
-        console.log(`From: ${ctx.from?.id}, Type: ${ctx.updateType}, Text: ${(ctx.message as any)?.text}`);
+        console.log(
+          `From: ${ctx.from?.id}, Type: ${ctx.updateType}, Text: ${
+            (ctx.message as any)?.text
+          }`
+        );
         await next();
       } catch (e) {
         console.error(e);
@@ -102,7 +106,9 @@ export class BotConfigurator {
     });
     bot.hears("/help", (ctx) => ctx.replyWithHTML(helloText));
     bot.hears("/more", (ctx) => createNewTask(ctx, ctx.from.id));
-    bot.hears("/more_to_me", (ctx) => createNewTask(ctx, ctx.from.id, ctx.from.id));
+    bot.hears("/more_to_me", (ctx) =>
+      createNewTask(ctx, ctx.from.id, ctx.from.id)
+    );
     bot.hears("/enable", async (ctx) => {
       const database = await getDatabase();
       await database.collection<any>("users").findOneAndUpdate(
@@ -190,7 +196,8 @@ async function createNewTask(
       telegram_id: pair_telegram_id,
     });
   } else {
-    const suitableUsers = await getUsersWithMinimumTaskCount();
+    const suitableUsers = await getUsersWithMinimumTaskCount(telegram_id);
+    if (!suitableUsers) return;
     const telegram_ids = suitableUsers.telegram_id;
     const selected_telegram_id = getRandomElement(telegram_ids);
     pair = await db.collection("users").findOne<any>({
