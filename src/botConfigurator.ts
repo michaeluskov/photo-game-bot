@@ -4,8 +4,9 @@ const { session } = require("telegraf-session-mongodb");
 import { injectable } from "tsyringe";
 import { loadStream, uploadPhoto } from "./photoUploader";
 import { url } from "telegraf/typings/button";
-import { getDatabase } from "./database";
+import { getDatabase, getUsersWithMinimumTaskCount } from "./database";
 import { helloText } from "./texts";
+import { getRandomElement } from "./helpers";
 
 export interface PhotoGameBotSession
   extends Scenes.SceneSession<PhotoGameBotContext> {
@@ -23,6 +24,7 @@ export class BotConfigurator {
   async configureBot(bot: Telegraf<PhotoGameBotContext>) {
     bot.use(async (ctx, next) => {
       try {
+        console.log(`From: ${ctx.from?.id}, Type: ${ctx.updateType}, Text: ${(ctx.message as any)?.text}`);
         await next();
       } catch (e) {
         console.error(e);
@@ -182,30 +184,18 @@ async function createNewTask(
     .toArray();
   if (taskArray.length == 0) return;
   const task = taskArray[0];
-  const users_count = await db.collection("users").countDocuments({
-    is_absent: false,
-  });
   let pair;
   if (pair_telegram_id) {
     pair = await db.collection("users").findOne<any>({
       telegram_id: pair_telegram_id,
     });
   } else {
-    const pairArray = await db
-      .collection("users")
-      .find<any>({
-        is_absent: false,
-        telegram_id: {
-          $not: {
-            $eq: telegram_id,
-          },
-        },
-      })
-      .skip(Math.max(Math.floor(Math.random() * users_count - 1), 0))
-      .limit(1)
-      .toArray();
-    if (pairArray.length == 0) return;
-    pair = pairArray[0];
+    const suitableUsers = await getUsersWithMinimumTaskCount();
+    const telegram_ids = suitableUsers.telegram_id;
+    const selected_telegram_id = getRandomElement(telegram_ids);
+    pair = await db.collection("users").findOne<any>({
+      telegram_id: selected_telegram_id,
+    });
   }
   const createdTask = await db.collection("tasks").insertOne({
     first: user.telegram_id,
