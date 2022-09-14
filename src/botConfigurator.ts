@@ -4,8 +4,9 @@ const { session } = require("telegraf-session-mongodb");
 import { injectable } from "tsyringe";
 import { loadStream, uploadPhoto } from "./photoUploader";
 import { url } from "telegraf/typings/button";
-import { getDatabase } from "./database";
+import { getDatabase, getUsersWithMinimumTaskCount } from "./database";
 import { helloText } from "./texts";
+import { getRandomElement } from "./helpers";
 
 export interface PhotoGameBotSession
   extends Scenes.SceneSession<PhotoGameBotContext> {
@@ -23,6 +24,11 @@ export class BotConfigurator {
   async configureBot(bot: Telegraf<PhotoGameBotContext>) {
     bot.use(async (ctx, next) => {
       try {
+        console.log(
+          `From: ${ctx.from?.id}, Type: ${ctx.updateType}, Text: ${
+            (ctx.message as any)?.text
+          }`
+        );
         await next();
       } catch (e) {
         console.error(e);
@@ -53,7 +59,7 @@ export class BotConfigurator {
         }
       );
       await ctx.replyWithHTML(
-        `Хорошо, ${name}. Приятно познакомиться!\n\nЕсли ты на выезде, запусти /enable, чтобы тебе начали приходить новые задания. Когда будешь уезжать (или не сможешь играть), выполни /disable`
+        `Хорошо, ${name}. Приятно познакомиться!\n\nЕсли ты на КонфУРе, запусти /enable, чтобы тебе начали приходить новые задания. Когда будешь уезжать (или не сможешь играть), выполни /disable`
       );
       await ctx.scene.leave();
     });
@@ -100,7 +106,9 @@ export class BotConfigurator {
     });
     bot.hears("/help", (ctx) => ctx.replyWithHTML(helloText));
     bot.hears("/more", (ctx) => createNewTask(ctx, ctx.from.id));
-    bot.hears("/more_to_me", (ctx) => createNewTask(ctx, ctx.from.id, ctx.from.id));
+    bot.hears("/more_to_me", (ctx) =>
+      createNewTask(ctx, ctx.from.id, ctx.from.id)
+    );
     bot.hears("/enable", async (ctx) => {
       const database = await getDatabase();
       await database.collection<any>("users").findOneAndUpdate(
@@ -131,7 +139,7 @@ export class BotConfigurator {
     });
     bot.on("photo", (ctx) =>
       ctx.reply(
-        "Я не понимаю, на какое задание это ответ :( Сначала нажми 'Отправить фотку' под заданием"
+        "Я не понимаю, на какое задание это ответ :( Сначала нажми на кнопку 'Отправить фотку' под заданием"
       )
     );
     bot.hears(/.*/, async (ctx) => {
@@ -159,7 +167,7 @@ async function sendPhotoGreeting(ctx: any) {
     telegram_id: task.second,
   });
   await ctx.replyWithHTML(
-    `Ждем фотку по заданию <b>${task.task_name}</b> (<b>${first.name}</b> + <b>${second.name}</b>)\n\nЕсли не хочешь отправлять, нажми /exit`
+    `Ждем фотку по заданию <b>${task.task_name}</b> (<b>${first.name}</b> + <b>${second.name}</b>)\nНажми на кнопку 📎 внизу экрана, выбери фотку и отправь\n\nЕсли не хочешь отправлять или перепутал задание, нажми /exit`
   );
 }
 
@@ -182,30 +190,19 @@ async function createNewTask(
     .toArray();
   if (taskArray.length == 0) return;
   const task = taskArray[0];
-  const users_count = await db.collection("users").countDocuments({
-    is_absent: false,
-  });
   let pair;
   if (pair_telegram_id) {
     pair = await db.collection("users").findOne<any>({
       telegram_id: pair_telegram_id,
     });
   } else {
-    const pairArray = await db
-      .collection("users")
-      .find<any>({
-        is_absent: false,
-        telegram_id: {
-          $not: {
-            $eq: telegram_id,
-          },
-        },
-      })
-      .skip(Math.max(Math.floor(Math.random() * users_count - 1), 0))
-      .limit(1)
-      .toArray();
-    if (pairArray.length == 0) return;
-    pair = pairArray[0];
+    const suitableUsers = await getUsersWithMinimumTaskCount(telegram_id);
+    if (!suitableUsers) return;
+    const telegram_ids = suitableUsers.telegram_id;
+    const selected_telegram_id = getRandomElement(telegram_ids);
+    pair = await db.collection("users").findOne<any>({
+      telegram_id: selected_telegram_id,
+    });
   }
   const createdTask = await db.collection("tasks").insertOne({
     first: user.telegram_id,
@@ -251,6 +248,7 @@ async function handlePhotoUpdate(
   }> &
     Omit<PhotoGameBotContext, keyof Context<import("typegram").Update>>
 ) {
+  const db = await getDatabase();
   const largestFile =
     ctx.update.message.photo[ctx.update.message.photo.length - 1];
   const largestFileId = largestFile.file_id;
@@ -261,27 +259,35 @@ async function handlePhotoUpdate(
   const photoUrl = await ctx.telegram.getFileLink(largestFileId);
   const buffer = await loadStream(photoUrl.toString());
   const uploadedUrl = await uploadPhoto(fileName, buffer);
-  const task = await (await getDatabase()).collection("tasks").findOne<any>({
+  const task = await db.collection("tasks").findOne<any>({
     _id: new ObjectId(ctx.session!.taskId),
   });
-  const updateResult = await (await getDatabase())
-    .collection("tasks")
-    .updateOne(
-      {
-        _id: new ObjectId(ctx.session!.taskId),
+  const updateResult = await db.collection("tasks").updateOne(
+    {
+      _id: new ObjectId(ctx.session!.taskId),
+    },
+    {
+      $set: {
+        done: 1,
+        photo_url: uploadedUrl,
+        done_datetime: new Date(),
       },
-      {
-        $set: {
-          done: 1,
-          photo_url: uploadedUrl,
-          done_datetime: new Date(),
-        },
-      }
-    );
+    }
+  );
   const text = `Круто, задание <b>${task.task_name}</b> выполнено! Скоро тебе придет еще одно`;
   await ctx.telegram.sendMessage(task.first, text, { parse_mode: "HTML" });
   await ctx.telegram.sendMessage(task.second, text, { parse_mode: "HTML" });
   await ctx.scene.leave();
-  await createNewTask(ctx, task.first);
-  await createNewTask(ctx, task.second);
+  if (
+    !(await db.collection("users").findOne<any>({ telegram_id: task.first }))
+      .is_absent
+  ) {
+    await createNewTask(ctx, task.first);
+  }
+  if (
+    !(await db.collection("users").findOne<any>({ telegram_id: task.second }))
+      .is_absent
+  ) {
+    await createNewTask(ctx, task.second);
+  }
 }
