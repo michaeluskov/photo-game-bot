@@ -17,7 +17,13 @@ export async function getUsersWithMinimumTaskCount(telegram_id: number) {
   const users = await db
     .collection("users")
     .aggregate<any>([
-      { $match: { is_absent: false, name: {$ne: null}, telegram_id: { $ne: telegram_id } } },
+      {
+        $match: {
+          is_absent: false,
+          name: { $ne: null },
+          telegram_id: { $ne: telegram_id },
+        },
+      },
       {
         $lookup: {
           from: "tasks",
