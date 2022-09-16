@@ -109,6 +109,11 @@ export class BotConfigurator {
     bot.hears("/more_to_me", (ctx) =>
       createNewTask(ctx, ctx.from.id, ctx.from.id)
     );
+    bot.hears(/more (.*?) (.*?)/, async (ctx) => {
+      const message = (ctx.message as any).text;
+      const parts = message.split(" ");
+      await createNewTask(ctx, parseInt(parts[1], 10), parseInt(parts[2], 10));
+    });
     bot.hears("/enable", async (ctx) => {
       const database = await getDatabase();
       await database.collection<any>("users").findOneAndUpdate(
