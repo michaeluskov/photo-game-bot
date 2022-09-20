@@ -1,6 +1,6 @@
 org: michaeluskov
-app: photogamebot-konfur
-service: photogamebot-konfur
+app: photogamebot
+service: photogamebot
 
 frameworkVersion: "3"
 

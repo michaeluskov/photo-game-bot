@@ -59,7 +59,7 @@ export class BotConfigurator {
         }
       );
       await ctx.replyWithHTML(
-        `Хорошо, ${name}. Приятно познакомиться!\n\nЕсли ты на КонфУРе, запусти /enable, чтобы тебе начали приходить новые задания. Когда будешь уезжать (или не сможешь играть), выполни /disable`
+        `Хорошо, ${name}. Приятно познакомиться!\n\nЕсли ты на Level UP, запусти /enable, чтобы тебе начали приходить новые задания. Когда будешь уезжать (или не сможешь играть), выполни /disable`
       );
       await ctx.scene.leave();
     });
@@ -216,7 +216,7 @@ async function createNewTask(
   });
   const messageText = (pairUser: any) =>
     `<b>Новое задание!</b>\n\nТема: <b>${task.name}</b>\n` +
-    `Напарник: <a href="tg://user?id=${pairUser.telegram_id}">${pairUser.name}</a>\n\nЕсли хочешь еще, жми /more. Когда получаешь новое задание, старое все так же можно сдать\n\nЕсли ты уже не на КонфУРе и больше не хочешь получать новые задания, жми /disable`;
+    `Напарник: <a href="tg://user?id=${pairUser.telegram_id}">${pairUser.name}</a>\n\nЕсли хочешь еще, жми /more. Когда получаешь новое задание, старое все так же можно сдать\n\nЕсли ты уже не на Level UP и больше не хочешь получать новые задания, жми /disable`;
   const userMessage = await ctx.telegram.sendMessage(
     telegram_id,
     messageText(pair),
