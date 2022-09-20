@@ -1,6 +1,20 @@
 {
     "version": "0.2.0",
     "configurations": [
+
+      {
+        "name": "tools/archive",
+        "type": "node",
+        "request": "launch",
+        "runtimeExecutable": "node",
+        "runtimeArgs": ["--nolazy", "-r", "ts-node/register/transpile-only"],
+  
+        "args": ["./archive.ts"],
+        
+        "cwd": "${workspaceRoot}/tools",
+        "internalConsoleOptions": "openOnSessionStart",
+        "skipFiles": ["<node_internals>/**", "node_modules/**"]
+      },
       {
         "name": "ts-node",
         "type": "node",
