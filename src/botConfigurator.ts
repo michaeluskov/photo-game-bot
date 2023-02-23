@@ -279,9 +279,44 @@ async function handlePhotoUpdate(
       },
     }
   );
+
+  const firstUser = await db.collection("users").findOneAndUpdate(
+    {
+      telegram_id: task.first,
+    },
+    {
+      $inc: {
+        tasks_count: 1,
+      },
+    }
+  );
+
+  let secondUser = firstUser;
+  if (task.first != task.second) {
+    secondUser = await db.collection("users").findOneAndUpdate(
+      {
+        telegram_id: task.second,
+      },
+      {
+        $inc: {
+          tasks_count: 1,
+        },
+      }
+    );
+  }
   const text = `Круто, задание <b>${task.task_name}</b> выполнено! Скоро тебе придет еще одно`;
   await ctx.telegram.sendMessage(task.first, text, { parse_mode: "HTML" });
   await ctx.telegram.sendMessage(task.second, text, { parse_mode: "HTML" });
+
+  const currentUser =
+  firstUser?.value?.telegram_id == ctx.from?.id ? firstUser : secondUser;
+  if (currentUser?.value?.tasks_count == 2) {
+    const successText =
+      "\n\nУ тебя уже есть три фото, круто! Подойди к организаторам у сцены и покажи это сообщение, тебя ждут переводные татуировки, чтобы было ещё больше классных фоток 😁" +
+      "\n\nПонравилось? Продолжай, заданий ещё много! Призов уже не будет, но будет весело))\n" +
+      "<i>А после мероприятия увидишь фотки всех участников.</i>";
+      await ctx.telegram.sendMessage(ctx.from?.id, successText, { parse_mode: "HTML" });
+  }
   await ctx.scene.leave();
   if (
     !(await db.collection("users").findOne<any>({ telegram_id: task.first }))
